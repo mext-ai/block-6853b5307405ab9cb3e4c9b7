@@ -27,6 +27,7 @@ interface Particle {
 
 const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", description = "Interactive fluid physics simulation" }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
   const particlesRef = useRef<Particle[]>([]);
   const mouseRef = useRef({ x: 0, y: 0, isPressed: false });
@@ -48,6 +49,30 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
   const DAMPING = 0.99;
   const INTERACTION_RADIUS = 50;
 
+  // Resize canvas to match container
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    
+    // Set canvas size to match container
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    
+    // Scale canvas back down using CSS
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    
+    // Scale the drawing context so everything draws at the higher resolution
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+    }
+  }, []);
+
   // Initialize particles
   const initializeParticles = useCallback(() => {
     const canvas = canvasRef.current;
@@ -55,15 +80,17 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
 
     const particles: Particle[] = [];
     const cols = Math.ceil(Math.sqrt(fluidProps.particleCount));
-    const spacing = Math.min(canvas.width / cols, canvas.height / cols) * 0.8;
+    const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
+    const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
+    const spacing = Math.min(canvasWidth / cols, canvasHeight / cols) * 0.8;
     
     for (let i = 0; i < fluidProps.particleCount; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
       
       particles.push({
-        x: canvas.width * 0.3 + col * spacing + Math.random() * 10,
-        y: canvas.height * 0.3 + row * spacing + Math.random() * 10,
+        x: canvasWidth * 0.3 + col * spacing + Math.random() * 10,
+        y: canvasHeight * 0.3 + row * spacing + Math.random() * 10,
         vx: (Math.random() - 0.5) * 2,
         vy: (Math.random() - 0.5) * 2,
         density: fluidProps.density,
@@ -163,6 +190,9 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
+    const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
+
     particles.forEach(particle => {
       particle.x += particle.vx;
       particle.y += particle.vy;
@@ -171,16 +201,16 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
       if (particle.x < 5) {
         particle.x = 5;
         particle.vx *= -0.5;
-      } else if (particle.x > canvas.width - 5) {
-        particle.x = canvas.width - 5;
+      } else if (particle.x > canvasWidth - 5) {
+        particle.x = canvasWidth - 5;
         particle.vx *= -0.5;
       }
       
       if (particle.y < 5) {
         particle.y = 5;
         particle.vy *= -0.5;
-      } else if (particle.y > canvas.height - 5) {
-        particle.y = canvas.height - 5;
+      } else if (particle.y > canvasHeight - 5) {
+        particle.y = canvasHeight - 5;
         particle.vy *= -0.5;
       }
     });
@@ -192,9 +222,12 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
     const ctx = canvas?.getContext('2d');
     if (!ctx || !canvas) return;
 
+    const canvasWidth = canvas.width / (window.devicePixelRatio || 1);
+    const canvasHeight = canvas.height / (window.devicePixelRatio || 1);
+
     // Clear canvas
     ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     const particles = particlesRef.current;
     
@@ -236,34 +269,55 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
     animationRef.current = requestAnimationFrame(animate);
   }, [isRunning, updateDensityAndPressure, applyForces, updatePositions, render]);
 
-  // Mouse event handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Get mouse position relative to canvas
+  const getMousePos = useCallback((e: React.MouseEvent) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return { x: 0, y: 0 };
     
     const rect = canvas.getBoundingClientRect();
-    mouseRef.current = {
+    return {
       x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      y: e.clientY - rect.top
+    };
+  }, []);
+
+  // Mouse event handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const pos = getMousePos(e);
+    mouseRef.current = {
+      x: pos.x,
+      y: pos.y,
       isPressed: true
     };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    mouseRef.current.x = e.clientX - rect.left;
-    mouseRef.current.y = e.clientY - rect.top;
+    const pos = getMousePos(e);
+    mouseRef.current.x = pos.x;
+    mouseRef.current.y = pos.y;
   };
 
   const handleMouseUp = () => {
     mouseRef.current.isPressed = false;
   };
 
-  // Initialize and start animation
+  // Handle window resize
   useEffect(() => {
+    const handleResize = () => {
+      resizeCanvas();
+      // Reinitialize particles with new canvas size
+      setTimeout(() => {
+        initializeParticles();
+      }, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [resizeCanvas, initializeParticles]);
+
+  // Initialize canvas size and particles
+  useEffect(() => {
+    resizeCanvas();
     initializeParticles();
     animate();
     
@@ -272,7 +326,7 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [initializeParticles, animate]);
+  }, [resizeCanvas, initializeParticles, animate]);
 
   // Restart simulation when properties change
   useEffect(() => {
@@ -307,7 +361,8 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+        flexShrink: 0
       }}>
         <h1 style={{ margin: 0, fontSize: '1.5rem' }}>{title}</h1>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -340,7 +395,7 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
         </div>
       </div>
 
-      <div style={{ display: 'flex', flex: 1 }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Controls Panel */}
         {showControls && (
           <div style={{
@@ -349,7 +404,8 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
             color: 'white',
             padding: '20px',
             overflowY: 'auto',
-            borderRight: '1px solid rgba(255, 255, 255, 0.2)'
+            borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+            flexShrink: 0
           }}>
             <h3 style={{ margin: '0 0 20px 0' }}>Fluid Properties</h3>
             
@@ -468,12 +524,18 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
           </div>
         )}
 
-        {/* Canvas */}
-        <div style={{ flex: 1, position: 'relative' }}>
+        {/* Canvas Container */}
+        <div 
+          ref={containerRef}
+          style={{ 
+            flex: 1, 
+            position: 'relative',
+            minWidth: 0,
+            minHeight: 0
+          }}
+        >
           <canvas
             ref={canvasRef}
-            width={800}
-            height={600}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -482,7 +544,8 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
               width: '100%',
               height: '100%',
               cursor: 'crosshair',
-              background: '#000'
+              background: '#000',
+              display: 'block'
             }}
           />
         </div>
