@@ -349,206 +349,235 @@ const Block: React.FC<BlockProps> = ({ title = "2D Fluid Simulation", descriptio
       height: '100vh',
       background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
       display: 'flex',
-      flexDirection: 'column',
       fontFamily: 'Arial, sans-serif',
       overflow: 'hidden'
     }}>
-      {/* Header */}
-      <div style={{
-        padding: '10px 20px',
-        background: 'rgba(0, 0, 0, 0.3)',
-        color: 'white',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-        flexShrink: 0
-      }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>{title}</h1>
-        <div style={{ display: 'flex', gap: '10px' }}>
+      {/* Controls Panel */}
+      {showControls && (
+        <div style={{
+          width: '280px',
+          background: 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          padding: '20px',
+          overflowY: 'auto',
+          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+          flexShrink: 0
+        }}>
+          <h3 style={{ margin: '0 0 20px 0' }}>Fluid Properties</h3>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Density: {fluidProps.density.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="3.0"
+              step="0.1"
+              value={fluidProps.density}
+              onChange={(e) => setFluidProps(prev => ({ ...prev, density: parseFloat(e.target.value) }))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Viscosity: {fluidProps.viscosity.toFixed(3)}
+            </label>
+            <input
+              type="range"
+              min="0.001"
+              max="0.1"
+              step="0.001"
+              value={fluidProps.viscosity}
+              onChange={(e) => setFluidProps(prev => ({ ...prev, viscosity: parseFloat(e.target.value) }))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Pressure: {fluidProps.pressure.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="5.0"
+              step="0.1"
+              value={fluidProps.pressure}
+              onChange={(e) => setFluidProps(prev => ({ ...prev, pressure: parseFloat(e.target.value) }))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Gravity: {fluidProps.gravity.toFixed(2)}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1.0"
+              step="0.01"
+              value={fluidProps.gravity}
+              onChange={(e) => setFluidProps(prev => ({ ...prev, gravity: parseFloat(e.target.value) }))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Temperature: {fluidProps.temperature}°C
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={fluidProps.temperature}
+              onChange={(e) => setFluidProps(prev => ({ ...prev, temperature: parseInt(e.target.value) }))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Particles: {fluidProps.particleCount}
+            </label>
+            <input
+              type="range"
+              min="50"
+              max="500"
+              step="10"
+              value={fluidProps.particleCount}
+              onChange={(e) => setFluidProps(prev => ({ ...prev, particleCount: parseInt(e.target.value) }))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
           <button
             onClick={() => setIsRunning(!isRunning)}
             style={{
-              padding: '8px 16px',
+              width: '100%',
+              padding: '10px',
               backgroundColor: isRunning ? '#ff4444' : '#44ff44',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              marginBottom: '10px'
             }}
           >
             {isRunning ? 'Pause' : 'Play'}
           </button>
+
           <button
-            onClick={() => setShowControls(!showControls)}
+            onClick={() => setShowControls(false)}
             style={{
-              padding: '8px 16px',
+              width: '100%',
+              padding: '10px',
               backgroundColor: '#4444ff',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              marginBottom: '10px'
             }}
           >
-            {showControls ? 'Hide Controls' : 'Show Controls'}
+            Hide Controls
           </button>
-        </div>
-      </div>
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Controls Panel */}
-        {showControls && (
-          <div style={{
-            width: '280px',
-            background: 'rgba(0, 0, 0, 0.8)',
-            color: 'white',
-            padding: '20px',
-            overflowY: 'auto',
-            borderRight: '1px solid rgba(255, 255, 255, 0.2)',
-            flexShrink: 0
-          }}>
-            <h3 style={{ margin: '0 0 20px 0' }}>Fluid Properties</h3>
-            
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Density: {fluidProps.density.toFixed(2)}
-              </label>
-              <input
-                type="range"
-                min="0.1"
-                max="3.0"
-                step="0.1"
-                value={fluidProps.density}
-                onChange={(e) => setFluidProps(prev => ({ ...prev, density: parseFloat(e.target.value) }))}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Viscosity: {fluidProps.viscosity.toFixed(3)}
-              </label>
-              <input
-                type="range"
-                min="0.001"
-                max="0.1"
-                step="0.001"
-                value={fluidProps.viscosity}
-                onChange={(e) => setFluidProps(prev => ({ ...prev, viscosity: parseFloat(e.target.value) }))}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Pressure: {fluidProps.pressure.toFixed(2)}
-              </label>
-              <input
-                type="range"
-                min="0.1"
-                max="5.0"
-                step="0.1"
-                value={fluidProps.pressure}
-                onChange={(e) => setFluidProps(prev => ({ ...prev, pressure: parseFloat(e.target.value) }))}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Gravity: {fluidProps.gravity.toFixed(2)}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="1.0"
-                step="0.01"
-                value={fluidProps.gravity}
-                onChange={(e) => setFluidProps(prev => ({ ...prev, gravity: parseFloat(e.target.value) }))}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Temperature: {fluidProps.temperature}°C
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={fluidProps.temperature}
-                onChange={(e) => setFluidProps(prev => ({ ...prev, temperature: parseInt(e.target.value) }))}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Particles: {fluidProps.particleCount}
-              </label>
-              <input
-                type="range"
-                min="50"
-                max="500"
-                step="10"
-                value={fluidProps.particleCount}
-                onChange={(e) => setFluidProps(prev => ({ ...prev, particleCount: parseInt(e.target.value) }))}
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <button
-              onClick={initializeParticles}
-              style={{
-                width: '100%',
-                padding: '10px',
-                backgroundColor: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                marginBottom: '10px'
-              }}
-            >
-              Reset Simulation
-            </button>
-
-            <div style={{ fontSize: '0.8rem', color: '#ccc', marginTop: '20px' }}>
-              <p><strong>Instructions:</strong></p>
-              <p>• Click and drag to attract particles</p>
-              <p>• Adjust properties to see different behaviors</p>
-              <p>• Colors represent density and velocity</p>
-            </div>
-          </div>
-        )}
-
-        {/* Canvas Container */}
-        <div 
-          ref={containerRef}
-          style={{ 
-            flex: 1, 
-            position: 'relative',
-            minWidth: 0,
-            minHeight: 0
-          }}
-        >
-          <canvas
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+          <button
+            onClick={initializeParticles}
             style={{
               width: '100%',
-              height: '100%',
-              cursor: 'crosshair',
-              background: '#000',
-              display: 'block'
+              padding: '10px',
+              backgroundColor: '#666',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              marginBottom: '10px'
             }}
-          />
+          >
+            Reset Simulation
+          </button>
+
+          <div style={{ fontSize: '0.8rem', color: '#ccc', marginTop: '20px' }}>
+            <p><strong>Instructions:</strong></p>
+            <p>• Click and drag to attract particles</p>
+            <p>• Adjust properties to see different behaviors</p>
+            <p>• Colors represent density and velocity</p>
+          </div>
         </div>
+      )}
+
+      {/* Canvas Container */}
+      <div 
+        ref={containerRef}
+        style={{ 
+          flex: 1, 
+          position: 'relative',
+          minWidth: 0,
+          minHeight: 0
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          style={{
+            width: '100%',
+            height: '100%',
+            cursor: 'crosshair',
+            background: '#000',
+            display: 'block'
+          }}
+        />
+        
+        {/* Show Controls Button when controls are hidden */}
+        {!showControls && (
+          <button
+            onClick={() => setShowControls(true)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              padding: '10px 16px',
+              backgroundColor: 'rgba(68, 68, 255, 0.8)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              backdropFilter: 'blur(5px)'
+            }}
+          >
+            Show Controls
+          </button>
+        )}
+        
+        {/* Pause/Play Button when controls are hidden */}
+        {!showControls && (
+          <button
+            onClick={() => setIsRunning(!isRunning)}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              right: '20px',
+              padding: '10px 16px',
+              backgroundColor: isRunning ? 'rgba(255, 68, 68, 0.8)' : 'rgba(68, 255, 68, 0.8)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              backdropFilter: 'blur(5px)'
+            }}
+          >
+            {isRunning ? 'Pause' : 'Play'}
+          </button>
+        )}
       </div>
     </div>
   );
